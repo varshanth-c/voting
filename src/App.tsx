@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import './App.css';
@@ -14,9 +12,14 @@ function App() {
   const [options, setOptions] = useState<Option[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // --- NEW STATE ---
+  // For the "add new option" form input
+  const [newOptionName, setNewOptionName] = useState('');
+  // For showing loading state on the specific button being clicked
+  const [isVoting, setIsVoting] = useState<number | null>(null);
 
   useEffect(() => {
-    // 1. Fetch the initial data
     const fetchOptions = async () => {
       try {
         setLoading(true);
@@ -36,38 +39,36 @@ function App() {
 
     fetchOptions();
 
-    // 2. Subscribe to real-time updates
     const channel = supabase
       .channel('options-channel')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'options' },
+        // Listen to INSERT and UPDATE events now
+        { event: '*', schema: 'public', table: 'options' },
         (payload) => {
-          // When an update is received, update the state
-          const updatedOption = payload.new as Option;
-          setOptions(currentOptions =>
-            currentOptions
-              .map(option =>
-                option.id === updatedOption.id ? updatedOption : option
-              )
-              .sort((a, b) => b.votes - a.votes) // Re-sort after update
-          );
+          // Refetch data to get the latest list and order
+          fetchOptions();
         }
       )
       .subscribe();
 
-    // 3. Cleanup function to unsubscribe
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
   const handleVote = async (id: number) => {
-    // This function remains the same.
-    // It updates the database, and the real-time subscription will handle the UI update.
+    // Check local storage to prevent multiple votes
+    if (localStorage.getItem('hasVotedPoll')) {
+      alert("You've already voted in this poll.");
+      return;
+    }
+
+    setIsVoting(id); // Set loading state for this button
     try {
       const optionToUpdate = options.find(opt => opt.id === id);
       if (!optionToUpdate) return;
+      
       const newVoteCount = optionToUpdate.votes + 1;
 
       const { error } = await supabase
@@ -76,8 +77,33 @@ function App() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Set flag in local storage after a successful vote
+      localStorage.setItem('hasVotedPoll', 'true');
+
     } catch (error: any) {
       console.error("Error updating vote:", error.message);
+    } finally {
+      setIsVoting(null); // Reset loading state
+    }
+  };
+  
+  // --- NEW FUNCTION ---
+  const handleAddOption = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newOptionName.trim() === '') return;
+
+    try {
+      const { error } = await supabase
+        .from('options')
+        .insert({ name: newOptionName.trim(), votes: 0 });
+
+      if (error) throw error;
+      
+      setNewOptionName(''); // Clear input on success
+    } catch (error: any) {
+      console.error('Error adding option:', error.message);
+      alert('Failed to add option.');
     }
   };
 
@@ -88,12 +114,29 @@ function App() {
     <div className="container">
       <h1>📊 Tech Framework Poll</h1>
       <p>Which framework do you prefer?</p>
+      
+      {/* --- NEW FORM --- */}
+      <form onSubmit={handleAddOption} className="add-option-form">
+        <input
+          type="text"
+          placeholder="Or add a new one..."
+          value={newOptionName}
+          onChange={(e) => setNewOptionName(e.target.value)}
+        />
+        <button type="submit">Add</button>
+      </form>
+      
       <div className="options-list">
         {options.map((option) => (
           <div key={option.id} className="option-item">
             <span className="option-name">{option.name}</span>
             <span className="option-votes">{option.votes} votes</span>
-            <button onClick={() => handleVote(option.id)}>Vote</button>
+            <button 
+              onClick={() => handleVote(option.id)}
+              disabled={isVoting === option.id}
+            >
+              {isVoting === option.id ? 'Voting...' : 'Vote'}
+            </button>
           </div>
         ))}
       </div>

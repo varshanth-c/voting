@@ -100,3 +100,35 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
+/* Add these styles to the bottom of src/App.css */
+
+.add-option-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+.add-option-form input {
+  flex-grow: 1;
+  background-color: #3a3a3a;
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 0.6em 1em;
+  font-size: 1em;
+  color: #fff;
+}
+
+.add-option-form input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.add-option-form button {
+  white-space: nowrap;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
