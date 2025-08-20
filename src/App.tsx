@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase';
 import './App.css';
-
+import LiveTyper from './LiveTyper';
 interface Option {
   id: number;
   name: string;
@@ -114,7 +114,10 @@ function App() {
     <div className="container">
       <h1>📊 Tech Framework Poll</h1>
       <p>Which framework do you prefer?</p>
-      
+      <hr className="separator" /> {/* Add a separator */}
+
+      {/* --- ADD THE NEW LIVE TYPER COMPONENT --- */}
+      <LiveTyper />
       {/* --- NEW FORM --- */}
       <form onSubmit={handleAddOption} className="add-option-form">
         <input
