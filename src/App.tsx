@@ -49,7 +49,7 @@ function App() {
         'postgres_changes',
         // Listen to all events (INSERT, UPDATE, DELETE) on the 'options' table
         { event: '*', schema: 'public', table: 'options' },
-        (payload) => {
+        (_payload) => {
           // When a change is detected, refetch all data to ensure the UI is in sync
           fetchOptions();
         }
